@@ -58,14 +58,17 @@ while True:
     # Calculate distance between thumb and index finger (for pinch drag)
     length_pinching, img, lineInfo2 = detector.findDistance(4, 8, img)
 
-    # ---- Pinch to drag with debounce logic ----
+    # ---- Pinch to drag with debounce logic and fixed autopy.toggle usage ----
     if fingers and len(fingers) >= 2 and fingers[1] == 1 and fingers[0] == 1:
         if length_pinching < 30:
             drag_counter += 1
             release_counter = 0
             if drag_counter > drag_start_frames and not dragging:
                 dragging = True
-                autopy.mouse.toggle(down=True)
+                try:
+                    autopy.mouse.toggle(True)  # Press (hold) left mouse button for drag
+                except Exception:
+                    pass
             if dragging and x1 is not None and y1 is not None:
                 x3 = np.interp(x1, (frameR, wCam - frameR), (0, wScr))
                 y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
@@ -80,14 +83,20 @@ while True:
             release_counter += 1
             drag_counter = 0
             if release_counter > drag_release_frames and dragging:
+                try:
+                    autopy.mouse.toggle(False)  # Release left mouse button (end drag)
+                except Exception:
+                    pass
                 dragging = False
-                autopy.mouse.toggle(up=True)
     else:
         release_counter += 1
         drag_counter = 0
         if release_counter > drag_release_frames and dragging:
+            try:
+                autopy.mouse.toggle(False)
+            except Exception:
+                pass
             dragging = False
-            autopy.mouse.toggle(up=True)
 
     # ---- Moving mode: only index finger up (no drag) ----
     if fingers and len(fingers) >= 3 and fingers[1] == 1 and fingers[2] == 0 and x1 is not None:
@@ -120,7 +129,9 @@ while True:
 
     # Display image
     cv2.imshow("Image", img)
-    if cv2.waitKey(1) & 0xFF == 27:
+    
+    key = cv2.waitKey(1)
+    if key == 27:  # ESC pressed
         break
 
 cap.release()
